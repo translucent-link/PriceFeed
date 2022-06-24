@@ -2,26 +2,40 @@
 pragma solidity ^0.8.13;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./Node.sol";
+import "./ChainlinkOracleRequester.sol";
+import "./OracleRequester.sol";
 import "chainlink-brownie-contracts/contracts/src/v0.8/ChainlinkClient.sol";
 
 contract PriceFeed is Ownable, ChainlinkClient {
-    struct Node {
-        address oracle;
-        string jobId;
-    }
-
     mapping(address => Node) nodes;
     address[] public oracles;
     uint256 public minimumOracles;
     uint256 public maximumOracles;
+    uint256 public payment;
+    OracleRequester oracleRequester;
 
-    constructor(uint256 _minimumOracles, uint256 _maximumOracles) {
+    constructor(
+        uint256 _minimumOracles,
+        uint256 _maximumOracles,
+        uint256 _payment
+    ) {
         minimumOracles = _minimumOracles;
         maximumOracles = _maximumOracles;
+        payment = _payment;
+        oracleRequester = new ChainlinkOracleRequester();
     }
 
     function noOracles() public view returns (uint256) {
         return oracles.length;
+    }
+
+    function setPayment(uint256 _payment) public onlyOwner {
+        payment = _payment;
+    }
+
+    function setOracleRequester(OracleRequester _requester) public onlyOwner {
+        oracleRequester = _requester;
     }
 
     function addOracle(address _oracle, string memory _jobId) public onlyOwner {
@@ -80,44 +94,16 @@ contract PriceFeed is Ownable, ChainlinkClient {
         for (uint256 i = 0; i < oracles.length; i++) {
             address oracle = oracles[i];
             Node memory node = nodes[oracle];
-            bytes32 requestId = makeRequest(
-                node.oracle,
-                stringToBytes32(node.jobId)
+            bytes32 requestId = oracleRequester.makeRequestToNode(
+                node,
+                payment,
+                this.requestCallback.selector
             );
         }
     }
 
-    function makeRequest(address _oracle, bytes32 _jobId)
-        private
-        returns (bytes32 requestId)
-    {
-        Chainlink.Request memory req = buildChainlinkRequest(
-            _oracle,
-            _jobId,
-            requestCallback.selector
-        );
-    }
-
     function requestCallback(bytes32 _requestId, uint256 newPrice)
         public
-        recordChainlinkFulfillment(_requestId, newPrice)
-    {
-        Chainlink.Response memory res = Chainlink.Response(_result);
-    }
-
-    function stringToBytes32(string memory source)
-        private
-        pure
-        returns (bytes32 result)
-    {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-
-        assembly {
-            // solhint-disable-line no-inline-assembly
-            result := mload(add(source, 32))
-        }
-    }
+        recordChainlinkFulfillment(_requestId)
+    {}
 }

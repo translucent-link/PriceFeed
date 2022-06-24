@@ -3,12 +3,18 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/PriceFeed.sol";
+import "./MockOracleRequester.sol";
 
 contract PriceFeedTest is Test {
     PriceFeed priceFeed;
 
     function setUp() public {
-        priceFeed = new PriceFeed(1, 2);
+        priceFeed = new PriceFeed(1, 2, 5000000000);
+    }
+
+    function testSetPayment() public {
+        priceFeed.setPayment(2);
+        assert(priceFeed.payment() == 2);
     }
 
     function testNoOracles() public {
@@ -81,5 +87,37 @@ contract PriceFeedTest is Test {
         );
         vm.expectRevert(bytes("Unable to set maximum, reduce current oracles"));
         priceFeed.setMaximumOracles(1);
+    }
+
+    function testMakeOracleRequests() public {
+        MockOracleRequester requester = new MockOracleRequester("somebytes");
+        priceFeed.setOracleRequester(requester);
+        priceFeed.addOracle(
+            address(0x188b71C9d27cDeE01B9b0dfF5C1aff62E8D6F434),
+            "159fc6b02a3c4904866f83dde78e5a1f"
+        );
+        priceFeed.addOracle(
+            address(0x1f3C37A25AF4Aa9D43a2fC336b8D3fbC0da0c11C),
+            "159fc6b02a3c4904866f83dde78e5a1e"
+        );
+        priceFeed.updatePrice();
+
+        assertEq(2, requester.noCalls(), "Expected 1 call");
+        assertEq(
+            address(0x1f3C37A25AF4Aa9D43a2fC336b8D3fbC0da0c11C),
+            requester.requestedOracle(),
+            "Expected last oracle address"
+        );
+        assertEq(
+            "159fc6b02a3c4904866f83dde78e5a1e",
+            requester.requestedJobId(),
+            "Expected last jobId"
+        );
+        assertEq(
+            5000000000,
+            requester.requestedPayment(),
+            "Expected payment = 5000000000"
+        );
+        // assertEq(20000, requester.requestedSelector(), "Expected selector");
     }
 }

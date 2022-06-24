@@ -3,12 +3,13 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/PriceFeed.sol";
+import "./MockOracleRequester.sol";
 
 contract PriceFeedOwnershipTest is Test {
     PriceFeed priceFeed;
 
     function setUp() public {
-        priceFeed = new PriceFeed(1, 2);
+        priceFeed = new PriceFeed(1, 2, 5000000000);
     }
 
     function testNotOwnerAddOracle() public {
@@ -38,5 +39,18 @@ contract PriceFeedOwnershipTest is Test {
         vm.prank(address(0));
         vm.expectRevert(bytes("Ownable: caller is not the owner"));
         priceFeed.setMaximumOracles(2);
+    }
+
+    function testNotOwnerSetPayment() public {
+        vm.prank(address(0));
+        vm.expectRevert(bytes("Ownable: caller is not the owner"));
+        priceFeed.setPayment(2);
+    }
+
+    function testNotOwnerSetOracleRequester() public {
+        OracleRequester requester = new MockOracleRequester("somebytes");
+        vm.prank(address(0));
+        vm.expectRevert(bytes("Ownable: caller is not the owner"));
+        priceFeed.setOracleRequester(requester);
     }
 }
