@@ -1,7 +1,10 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-contract PriceFeed {
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "chainlink-brownie-contracts/contracts/src/v0.8/ChainlinkClient.sol";
+
+contract PriceFeed is Ownable, ChainlinkClient {
     struct Node {
         address oracle;
         string jobId;
@@ -21,7 +24,7 @@ contract PriceFeed {
         return oracles.length;
     }
 
-    function addOracle(address _oracle, string memory _jobId) public {
+    function addOracle(address _oracle, string memory _jobId) public onlyOwner {
         require(_oracle != address(0), "Oracle cannot be 0x0");
         Node memory node = nodes[_oracle];
         require(node.oracle != _oracle, "Oracle already added");
@@ -29,7 +32,7 @@ contract PriceFeed {
         oracles.push(_oracle);
     }
 
-    function removeOracle(address _oracle) public {
+    function removeOracle(address _oracle) public onlyOwner {
         require(_oracle != address(0), "Oracle cannot be 0x0");
         Node memory node = nodes[_oracle];
         require(node.oracle == _oracle, "Oracle not added");
@@ -53,7 +56,7 @@ contract PriceFeed {
         oracles.pop();
     }
 
-    function setMinimumOracles(uint256 _minimumOracles) public {
+    function setMinimumOracles(uint256 _minimumOracles) public onlyOwner {
         require(_minimumOracles > 0, "Minimum oracles must be greater than 0");
         require(
             oracles.length >= _minimumOracles,
@@ -62,12 +65,59 @@ contract PriceFeed {
         minimumOracles = _minimumOracles;
     }
 
-    function setMaximumOracles(uint256 _maximumOracles) public {
+    function setMaximumOracles(uint256 _maximumOracles) public onlyOwner {
         require(_maximumOracles > 0, "Maximum oracles must be greater than 0");
         require(
             oracles.length <= _maximumOracles,
             "Unable to set maximum, reduce current oracles"
         );
         maximumOracles = _maximumOracles;
+    }
+
+    function updatePrice() external onlyOwner {
+        require(oracles.length >= minimumOracles, "Not enough oracles");
+        require(oracles.length <= maximumOracles, "Too many oracles");
+        for (uint256 i = 0; i < oracles.length; i++) {
+            address oracle = oracles[i];
+            Node memory node = nodes[oracle];
+            bytes32 requestId = makeRequest(
+                node.oracle,
+                stringToBytes32(node.jobId)
+            );
+        }
+    }
+
+    function makeRequest(address _oracle, bytes32 _jobId)
+        private
+        returns (bytes32 requestId)
+    {
+        Chainlink.Request memory req = buildChainlinkRequest(
+            _oracle,
+            _jobId,
+            requestCallback.selector
+        );
+    }
+
+    function requestCallback(bytes32 _requestId, uint256 newPrice)
+        public
+        recordChainlinkFulfillment(_requestId, newPrice)
+    {
+        Chainlink.Response memory res = Chainlink.Response(_result);
+    }
+
+    function stringToBytes32(string memory source)
+        private
+        pure
+        returns (bytes32 result)
+    {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+
+        assembly {
+            // solhint-disable-line no-inline-assembly
+            result := mload(add(source, 32))
+        }
     }
 }
