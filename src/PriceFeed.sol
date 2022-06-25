@@ -8,12 +8,17 @@ import "./OracleRequester.sol";
 import "chainlink-brownie-contracts/contracts/src/v0.8/ChainlinkClient.sol";
 
 contract PriceFeed is Ownable, ChainlinkClient {
-    mapping(address => Node) nodes;
-    address[] public oracles;
-    uint256 public minimumOracles;
-    uint256 public maximumOracles;
-    uint256 public payment;
+    mapping(address => Node) private nodes;
+    address[] private oracles;
+    uint256 private minimumOracles;
+    uint256 private maximumOracles;
+    uint256 private payment;
     OracleRequester oracleRequester;
+
+    uint256[] public prices;
+    uint256 public price;
+    uint256 public lastUpdatedTimestamp;
+    uint256 public updatesReceived;
 
     constructor(
         uint256 _minimumOracles,
@@ -24,21 +29,37 @@ contract PriceFeed is Ownable, ChainlinkClient {
         maximumOracles = _maximumOracles;
         payment = _payment;
         oracleRequester = new ChainlinkOracleRequester();
+        updatesReceived = 0;
     }
 
-    function noOracles() public view returns (uint256) {
+    function noOracles() external view returns (uint256) {
         return oracles.length;
     }
 
-    function setPayment(uint256 _payment) public onlyOwner {
+    function setPayment(uint256 _payment) external onlyOwner {
         payment = _payment;
     }
 
-    function setOracleRequester(OracleRequester _requester) public onlyOwner {
+    function getPaymnent() external view returns (uint256) {
+        return payment;
+    }
+
+    function getMinimumOracles() external view returns (uint256) {
+        return minimumOracles;
+    }
+
+    function getMaximumOracles() external view returns (uint256) {
+        return maximumOracles;
+    }
+
+    function setOracleRequester(OracleRequester _requester) external onlyOwner {
         oracleRequester = _requester;
     }
 
-    function addOracle(address _oracle, string memory _jobId) public onlyOwner {
+    function addOracle(address _oracle, string memory _jobId)
+        external
+        onlyOwner
+    {
         require(_oracle != address(0), "Oracle cannot be 0x0");
         Node memory node = nodes[_oracle];
         require(node.oracle != _oracle, "Oracle already added");
@@ -46,7 +67,7 @@ contract PriceFeed is Ownable, ChainlinkClient {
         oracles.push(_oracle);
     }
 
-    function removeOracle(address _oracle) public onlyOwner {
+    function removeOracle(address _oracle) external onlyOwner {
         require(_oracle != address(0), "Oracle cannot be 0x0");
         Node memory node = nodes[_oracle];
         require(node.oracle == _oracle, "Oracle not added");
@@ -70,7 +91,7 @@ contract PriceFeed is Ownable, ChainlinkClient {
         oracles.pop();
     }
 
-    function setMinimumOracles(uint256 _minimumOracles) public onlyOwner {
+    function setMinimumOracles(uint256 _minimumOracles) external onlyOwner {
         require(_minimumOracles > 0, "Minimum oracles must be greater than 0");
         require(
             oracles.length >= _minimumOracles,
@@ -79,7 +100,7 @@ contract PriceFeed is Ownable, ChainlinkClient {
         minimumOracles = _minimumOracles;
     }
 
-    function setMaximumOracles(uint256 _maximumOracles) public onlyOwner {
+    function setMaximumOracles(uint256 _maximumOracles) external onlyOwner {
         require(_maximumOracles > 0, "Maximum oracles must be greater than 0");
         require(
             oracles.length <= _maximumOracles,
@@ -102,8 +123,25 @@ contract PriceFeed is Ownable, ChainlinkClient {
         }
     }
 
-    function requestCallback(bytes32 _requestId, uint256 newPrice)
-        public
-        recordChainlinkFulfillment(_requestId)
-    {}
+    function requestCallback(bytes32 _requestId, uint256 _newPrice)
+        external
+    // recordChainlinkFulfillment(_requestId)
+    {
+        prices.push(_newPrice);
+        updatesReceived++;
+        if (updatesReceived == oracles.length) {
+            price = average(prices);
+            lastUpdatedTimestamp = block.timestamp;
+            delete prices;
+            updatesReceived = 0;
+        }
+    }
+
+    function average(uint256[] memory _prices) public pure returns (uint256) {
+        uint256 _accumulator = 0;
+        for (uint256 i = 0; i < _prices.length; i++) {
+            _accumulator += _prices[i];
+        }
+        return _accumulator / _prices.length;
+    }
 }

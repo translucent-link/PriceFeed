@@ -14,7 +14,7 @@ contract PriceFeedTest is Test {
 
     function testSetPayment() public {
         priceFeed.setPayment(2);
-        assert(priceFeed.payment() == 2);
+        assert(priceFeed.getPaymnent() == 2);
     }
 
     function testNoOracles() public {
@@ -73,7 +73,7 @@ contract PriceFeedTest is Test {
             "159fc6b02a3c4904866f83dde78e5a1e"
         );
         priceFeed.setMinimumOracles(1);
-        assertEq(1, priceFeed.minimumOracles(), "Expected 1 minimum oracle");
+        assertEq(1, priceFeed.getMinimumOracles(), "Expected 1 minimum oracle");
     }
 
     function testSetMaximumOraclesBelowCurrentNotAllowed() public {
