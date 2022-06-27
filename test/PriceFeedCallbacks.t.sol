@@ -4,28 +4,40 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/PriceFeed.sol";
 import "./MockOracleRequester.sol";
+import "./MockLINK.sol";
+import "./MockOracle.sol";
 
 contract PriceFeedTest is Test {
     using stdStorage for StdStorage;
 
     PriceFeed priceFeed;
+    LinkToken linkToken;
+    bytes32 requestId1;
+    bytes32 requestId2;
 
     function setUp() public {
+
+        linkToken = new LinkToken();
+        mockOracle1 = MockOracle(linkToken.address);
+        mockOracle2 = MockOracle(linkToken.address);
+
         priceFeed = new PriceFeed(1, 2, 5000000000);
         MockOracleRequester requester = new MockOracleRequester("somebytes");
         priceFeed.setOracleRequester(requester);
         priceFeed.addOracle(
-            address(0x188b71C9d27cDeE01B9b0dfF5C1aff62E8D6F434),
+            mockOracle1.address,
             "159fc6b02a3c4904866f83dde78e5a1f"
         );
         priceFeed.addOracle(
-            address(0x1f3C37A25AF4Aa9D43a2fC336b8D3fbC0da0c11C),
+            mockOracle2.address,
             "159fc6b02a3c4904866f83dde78e5a1e"
         );
     }
 
     function testInitialCallback() public {
-        priceFeed.requestCallback("abc123", 1000000);
+        priceFeed.updatePrice();
+        byrtes32 requestId = priceFeed.requestIds[0];   
+        priceFeed.requestCallback(requestId, 1000000);
         assertEq(
             0,
             priceFeed.price(),

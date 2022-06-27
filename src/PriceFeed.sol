@@ -16,6 +16,7 @@ contract PriceFeed is Ownable, ChainlinkClient {
     OracleRequester oracleRequester;
 
     uint256[] public prices;
+    bytes32[] public requestIds;
     uint256 public price;
     uint256 public lastUpdatedTimestamp;
     uint256 public updatesReceived;
@@ -120,12 +121,13 @@ contract PriceFeed is Ownable, ChainlinkClient {
                 payment,
                 this.requestCallback.selector
             );
+            requestIds.push(requestId);
         }
     }
 
     function requestCallback(bytes32 _requestId, uint256 _newPrice)
         external
-    // recordChainlinkFulfillment(_requestId)
+        recordChainlinkFulfillment(_requestId)
     {
         prices.push(_newPrice);
         updatesReceived++;
@@ -133,6 +135,7 @@ contract PriceFeed is Ownable, ChainlinkClient {
             price = average(prices);
             lastUpdatedTimestamp = block.timestamp;
             delete prices;
+            delete requestIds;
             updatesReceived = 0;
         }
     }
