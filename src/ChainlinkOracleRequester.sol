@@ -3,18 +3,24 @@ pragma solidity ^0.8.13;
 
 import "chainlink-brownie-contracts/contracts/src/v0.8/ChainlinkClient.sol";
 import "./Node.sol";
-import "./OracleRequester.sol";
+import "./OracleRequesterInterface.sol";
+import "./PriceReceiverInterface.sol";
 
-contract ChainlinkOracleRequester is ChainlinkClient, OracleRequester {
-    function makeRequestToNode(
-        Node memory _node,
-        uint256 _payment,
-        bytes4 _selector
-    ) external returns (bytes32 requestId) {
+contract ChainlinkOracleRequester is ChainlinkClient, OracleRequesterInterface {
+    address public priceReceiverAddress;
+
+    constructor(address _priceReceiverAddress) {
+        priceReceiverAddress = _priceReceiverAddress;
+    }
+
+    function makeRequestToNode(Node memory _node, uint256 _payment)
+        external
+        returns (bytes32 requestId)
+    {
         Chainlink.Request memory req = buildChainlinkRequest(
             stringToBytes32(_node.jobId),
             address(this),
-            _selector
+            this.receivePriceCallback.selector
         );
 
         requestId = sendChainlinkRequestTo(_node.oracle, req, _payment);
@@ -34,5 +40,15 @@ contract ChainlinkOracleRequester is ChainlinkClient, OracleRequester {
             // solhint-disable-line no-inline-assembly
             result := mload(add(source, 32))
         }
+    }
+
+    function receivePriceCallback(bytes32 _requestId, uint256 _newPrice)
+        external
+        recordChainlinkFulfillment(_requestId)
+    {
+        PriceReceiverInterface priceReceiver = PriceReceiverInterface(
+            priceReceiverAddress
+        );
+        priceReceiver.receivePrice(_requestId, _newPrice);
     }
 }

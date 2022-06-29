@@ -4,16 +4,16 @@ pragma solidity ^0.8.13;
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./Node.sol";
 import "./ChainlinkOracleRequester.sol";
-import "./OracleRequester.sol";
-import "chainlink-brownie-contracts/contracts/src/v0.8/ChainlinkClient.sol";
+import "./OracleRequesterInterface.sol";
+import "./PriceReceiverInterface.sol";
 
-contract PriceFeed is Ownable, ChainlinkClient {
+contract PriceFeed is Ownable, PriceReceiverInterface {
     mapping(address => Node) private nodes;
     address[] private oracles;
     uint256 private minimumOracles;
     uint256 private maximumOracles;
     uint256 private payment;
-    OracleRequester oracleRequester;
+    OracleRequesterInterface oracleRequester;
 
     uint256[] public prices;
     bytes32[] public requestIds;
@@ -29,7 +29,7 @@ contract PriceFeed is Ownable, ChainlinkClient {
         minimumOracles = _minimumOracles;
         maximumOracles = _maximumOracles;
         payment = _payment;
-        oracleRequester = new ChainlinkOracleRequester();
+        oracleRequester = new ChainlinkOracleRequester(address(this));
         updatesReceived = 0;
     }
 
@@ -53,7 +53,10 @@ contract PriceFeed is Ownable, ChainlinkClient {
         return maximumOracles;
     }
 
-    function setOracleRequester(OracleRequester _requester) external onlyOwner {
+    function setOracleRequester(OracleRequesterInterface _requester)
+        external
+        onlyOwner
+    {
         oracleRequester = _requester;
     }
 
@@ -118,17 +121,13 @@ contract PriceFeed is Ownable, ChainlinkClient {
             Node memory node = nodes[oracle];
             bytes32 requestId = oracleRequester.makeRequestToNode(
                 node,
-                payment,
-                this.requestCallback.selector
+                payment
             );
             requestIds.push(requestId);
         }
     }
 
-    function requestCallback(bytes32 _requestId, uint256 _newPrice)
-        external
-        recordChainlinkFulfillment(_requestId)
-    {
+    function receivePrice(bytes32, uint256 _newPrice) external {
         prices.push(_newPrice);
         updatesReceived++;
         if (updatesReceived == oracles.length) {

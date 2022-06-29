@@ -48,7 +48,9 @@ contract PriceFeedOwnershipTest is Test {
     }
 
     function testNotOwnerSetOracleRequester() public {
-        OracleRequester requester = new MockOracleRequester("somebytes");
+        OracleRequesterInterface requester = new MockOracleRequester(
+            "somebytes"
+        );
         vm.prank(address(0));
         vm.expectRevert(bytes("Ownable: caller is not the owner"));
         priceFeed.setOracleRequester(requester);
