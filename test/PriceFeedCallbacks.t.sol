@@ -50,6 +50,7 @@ contract PriceFeedTest is Test {
         vm.warp(1680000);
         hoax(node1);
         priceFeed.receivePrice("req1", price1);
+        vm.expectEmit(true, true, false, false, address(priceFeed));
         hoax(node2);
         priceFeed.receivePrice("req2", price2);
         assertEq(

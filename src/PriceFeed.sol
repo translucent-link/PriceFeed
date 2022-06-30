@@ -39,6 +39,9 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
     // number of price updates received - so far
     uint256 public updatesReceived;
 
+    // Emitted when all oracles have reported in and the price is updated
+    event PriceUpdated(uint256 price, uint256 timestamp);
+
     // Creates a new PriceFeed contract with specified minimum and maximum number of oracles as well as LINK payment details.
     constructor(
         uint256 _minimumOracles,
@@ -154,6 +157,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
             lastUpdatedTimestamp = block.timestamp;
             delete prices;
             updatesReceived = 0;
+            emit PriceUpdated(price, lastUpdatedTimestamp);
         }
     }
 }
