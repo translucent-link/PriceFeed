@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.7;
 
 import "chainlink-brownie-contracts/contracts/src/v0.8/ChainlinkClient.sol";
 import "./Node.sol";
@@ -10,12 +10,21 @@ contract ChainlinkOracleRequester is ChainlinkClient, OracleRequesterInterface {
     address public priceReceiverAddress;
 
     constructor(address _priceReceiverAddress, address _linkTokenAddress) {
+        require(
+            _priceReceiverAddress != address(0),
+            "PriceReceiverAddress cannot be 0x0"
+        );
+        require(
+            _linkTokenAddress != address(0),
+            "LinkTokenAddress cannot be 0x0"
+        );
         priceReceiverAddress = _priceReceiverAddress;
         setChainlinkToken(_linkTokenAddress);
     }
 
     function makeRequestToNode(Node memory _node, uint256 _payment)
         external
+        override
         returns (bytes32 requestId)
     {
         Chainlink.Request memory req = buildChainlinkRequest(
