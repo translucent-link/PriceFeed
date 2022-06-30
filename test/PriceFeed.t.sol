@@ -9,7 +9,12 @@ contract PriceFeedTest is Test {
     PriceFeed priceFeed;
 
     function setUp() public {
-        priceFeed = new PriceFeed(1, 2, 5000000000);
+        priceFeed = new PriceFeed(
+            1,
+            2,
+            5000000000,
+            0x514910771AF9Ca656af840dff83E8264EcF986CA
+        );
     }
 
     function testSetPayment() public {

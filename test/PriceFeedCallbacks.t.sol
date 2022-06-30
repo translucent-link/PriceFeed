@@ -17,7 +17,12 @@ contract PriceFeedTest is Test {
         node1 = 0x57B6611dE36d8C093cA1c01E054dB301d8e092F5;
         node2 = 0xB5DB0Eb39522427f292F4aeCA62B7886639BE8Da;
 
-        priceFeed = new PriceFeed(1, 2, 5000000000);
+        priceFeed = new PriceFeed(
+            1,
+            2,
+            5000000000,
+            0x514910771AF9Ca656af840dff83E8264EcF986CA
+        );
         MockOracleRequester requester = new MockOracleRequester("somebytes");
         priceFeed.setOracleRequester(requester);
         priceFeed.addOracle(node1, "159fc6b02a3c4904866f83dde78e5a1f");

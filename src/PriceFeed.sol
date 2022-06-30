@@ -9,38 +9,64 @@ import "./PriceReceiverInterface.sol";
 import "./Math.sol";
 
 contract PriceFeed is Ownable, PriceReceiverInterface {
+    // a registry of address and nodes;
     mapping(address => Node) private nodes;
+
+    // list of permitted oracle addresses
     address[] public oracles;
+
+    // mimimum number of oracles required to trigger a price update
     uint256 public minimumOracles;
+
+    // maximum number of oracles allowed to trigger a price update
     uint256 public maximumOracles;
+
+    // the payment in LINK that each oracle is awarded for each price update
     uint256 public payment;
+
+    // contains the Chainlink client for request & callback
     OracleRequesterInterface oracleRequester;
 
+    // list of prices received from oracles - so far
     uint256[] public prices;
+
+    // latest calculated price
     uint256 public price;
+
+    // block timestamp of the last price update
     uint256 public lastUpdatedTimestamp;
+
+    // number of price updates received - so far
     uint256 public updatesReceived;
 
+    // Creates a new PriceFeed contract with specified minimum and maximum number of oracles as well as LINK payment details.
     constructor(
         uint256 _minimumOracles,
         uint256 _maximumOracles,
-        uint256 _payment
+        uint256 _payment,
+        address _linkTokenAddress
     ) {
         minimumOracles = _minimumOracles;
         maximumOracles = _maximumOracles;
         payment = _payment;
-        oracleRequester = new ChainlinkOracleRequester(address(this));
+        oracleRequester = new ChainlinkOracleRequester(
+            address(this),
+            _linkTokenAddress
+        );
         updatesReceived = 0;
     }
 
+    // Returns the number of oracles registered with this PriceFeed contract.
     function noOracles() public view returns (uint256) {
         return oracles.length;
     }
 
+    // Updates the LINK payment amount that each oracle receives.
     function setPayment(uint256 _payment) external onlyOwner {
         payment = _payment;
     }
 
+    // Updates the OracleRequest used to make ChainlinkRequests. Typically only used for testing.
     function setOracleRequester(OracleRequesterInterface _requester)
         external
         onlyOwner
@@ -48,6 +74,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         oracleRequester = _requester;
     }
 
+    // Adds an oracle to the list of permitted oracles.
     function addOracle(address _oracle, string memory _jobId)
         external
         onlyOwner
@@ -59,6 +86,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         oracles.push(_oracle);
     }
 
+    // Removes an oracle from the list of permitted oracles.
     function removeOracle(address _oracle) external onlyOwner {
         require(_oracle != address(0), "Oracle cannot be 0x0");
         Node memory node = nodes[_oracle];
@@ -67,6 +95,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         deleteOracle(_oracle);
     }
 
+    // Returns the index of the oracle in the list of oracles. Returns -1 if not found.
     function indexOfOracle(address _oracle) private view returns (int256) {
         for (uint256 i = 0; i < oracles.length; i++) {
             if (oracles[i] == _oracle) {
@@ -76,13 +105,15 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         return -1;
     }
 
+    // Internal function that deletes an oracle from the list of permitted oracles and compacts the list.
     function deleteOracle(address _oracle) private {
         int256 index = indexOfOracle(_oracle);
-        require(index != -1, "Oracle not added");
+        require(indexOfOracle(_oracle) != -1, "Oracle not added");
         oracles[uint256(index)] = oracles[oracles.length - 1];
         oracles.pop();
     }
 
+    // Updates the minimum number of oracles required to trigger a price update. Checks to see if the new minimum is less than the current number of oracles.
     function setMinimumOracles(uint256 _minimumOracles) external onlyOwner {
         require(_minimumOracles > 0, "Minimum oracles must be greater than 0");
         require(
@@ -92,6 +123,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         minimumOracles = _minimumOracles;
     }
 
+    // Updates the maximum number of oracles allowed to trigger a price update. Checks to see if the new maximum is greater than the current number of oracles.
     function setMaximumOracles(uint256 _maximumOracles) external onlyOwner {
         require(_maximumOracles > 0, "Maximum oracles must be greater than 0");
         require(
@@ -101,6 +133,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         maximumOracles = _maximumOracles;
     }
 
+    // Initiates a series of price update requests with oracles
     function updatePrice() external onlyOwner {
         require(oracles.length >= minimumOracles, "Not enough oracles");
         require(oracles.length <= maximumOracles, "Too many oracles");
@@ -111,8 +144,9 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         }
     }
 
+    // Records a price update from an oracle. If all oracles have reported, the price is calculated and the PriceUpdated event is emitted.
     function receivePrice(bytes32, uint256 _newPrice) external {
-        require(validOracle(msg.sender), "Not a valid sender");
+        require(indexOfOracle(msg.sender) != -1, "Not a valid sender");
         prices.push(_newPrice);
         updatesReceived++;
         if (updatesReceived == oracles.length) {
@@ -121,15 +155,5 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
             delete prices;
             updatesReceived = 0;
         }
-    }
-
-    // Returns true if the address specified is one of the permitted oracles involved in this PriceFeed
-    function validOracle(address _oracle) private view returns (bool) {
-        for (uint256 i = 0; i < oracles.length; i++) {
-            if (oracles[i] == _oracle) {
-                return true;
-            }
-        }
-        return false;
     }
 }

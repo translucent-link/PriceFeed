@@ -9,8 +9,9 @@ import "./PriceReceiverInterface.sol";
 contract ChainlinkOracleRequester is ChainlinkClient, OracleRequesterInterface {
     address public priceReceiverAddress;
 
-    constructor(address _priceReceiverAddress) {
+    constructor(address _priceReceiverAddress, address _linkTokenAddress) {
         priceReceiverAddress = _priceReceiverAddress;
+        setChainlinkToken(_linkTokenAddress);
     }
 
     function makeRequestToNode(Node memory _node, uint256 _payment)
