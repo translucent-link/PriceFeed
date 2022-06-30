@@ -39,8 +39,11 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
     // number of price updates received - so far
     uint256 public updatesReceived;
 
+    // Emitted when a price update is requested.
+    event PriceRequested(address indexed oracle, string indexed jobId);
+
     // Emitted when all oracles have reported in and the price is updated
-    event PriceUpdated(uint256 price, uint256 timestamp);
+    event PriceUpdated(uint256 indexed price, uint256 timestamp);
 
     // Creates a new PriceFeed contract with specified minimum and maximum number of oracles as well as LINK payment details.
     constructor(
@@ -144,6 +147,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
             address oracle = oracles[i];
             Node memory node = nodes[oracle];
             oracleRequester.makeRequestToNode(node, payment);
+            emit PriceRequested(oracle, node.jobId);
         }
     }
 
