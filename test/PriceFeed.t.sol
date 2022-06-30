@@ -14,7 +14,7 @@ contract PriceFeedTest is Test {
 
     function testSetPayment() public {
         priceFeed.setPayment(2);
-        assert(priceFeed.getPaymnent() == 2);
+        assert(priceFeed.payment() == 2);
     }
 
     function testNoOracles() public {
@@ -73,7 +73,20 @@ contract PriceFeedTest is Test {
             "159fc6b02a3c4904866f83dde78e5a1e"
         );
         priceFeed.setMinimumOracles(1);
-        assertEq(1, priceFeed.getMinimumOracles(), "Expected 1 minimum oracle");
+        assertEq(1, priceFeed.minimumOracles(), "Expected 1 minimum oracle");
+    }
+
+    function testSetMaximumOracles() public {
+        priceFeed.addOracle(
+            address(0x188b71C9d27cDeE01B9b0dfF5C1aff62E8D6F434),
+            "159fc6b02a3c4904866f83dde78e5a1f"
+        );
+        priceFeed.addOracle(
+            address(0x1f3C37A25AF4Aa9D43a2fC336b8D3fbC0da0c11C),
+            "159fc6b02a3c4904866f83dde78e5a1e"
+        );
+        priceFeed.setMaximumOracles(3);
+        assertEq(3, priceFeed.maximumOracles(), "Expected 3 maximum oracles");
     }
 
     function testSetMaximumOraclesBelowCurrentNotAllowed() public {

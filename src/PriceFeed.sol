@@ -6,17 +6,17 @@ import "./Node.sol";
 import "./ChainlinkOracleRequester.sol";
 import "./OracleRequesterInterface.sol";
 import "./PriceReceiverInterface.sol";
+import "./Math.sol";
 
 contract PriceFeed is Ownable, PriceReceiverInterface {
     mapping(address => Node) private nodes;
-    address[] private oracles;
-    uint256 private minimumOracles;
-    uint256 private maximumOracles;
-    uint256 private payment;
+    address[] public oracles;
+    uint256 public minimumOracles;
+    uint256 public maximumOracles;
+    uint256 public payment;
     OracleRequesterInterface oracleRequester;
 
     uint256[] public prices;
-    bytes32[] public requestIds;
     uint256 public price;
     uint256 public lastUpdatedTimestamp;
     uint256 public updatesReceived;
@@ -33,24 +33,12 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         updatesReceived = 0;
     }
 
-    function noOracles() external view returns (uint256) {
+    function noOracles() public view returns (uint256) {
         return oracles.length;
     }
 
     function setPayment(uint256 _payment) external onlyOwner {
         payment = _payment;
-    }
-
-    function getPaymnent() external view returns (uint256) {
-        return payment;
-    }
-
-    function getMinimumOracles() external view returns (uint256) {
-        return minimumOracles;
-    }
-
-    function getMaximumOracles() external view returns (uint256) {
-        return maximumOracles;
     }
 
     function setOracleRequester(OracleRequesterInterface _requester)
@@ -119,31 +107,29 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         for (uint256 i = 0; i < oracles.length; i++) {
             address oracle = oracles[i];
             Node memory node = nodes[oracle];
-            bytes32 requestId = oracleRequester.makeRequestToNode(
-                node,
-                payment
-            );
-            requestIds.push(requestId);
+            oracleRequester.makeRequestToNode(node, payment);
         }
     }
 
     function receivePrice(bytes32, uint256 _newPrice) external {
+        require(validOracle(msg.sender), "Not a valid sender");
         prices.push(_newPrice);
         updatesReceived++;
         if (updatesReceived == oracles.length) {
-            price = average(prices);
+            price = Math.average(prices);
             lastUpdatedTimestamp = block.timestamp;
             delete prices;
-            delete requestIds;
             updatesReceived = 0;
         }
     }
 
-    function average(uint256[] memory _prices) public pure returns (uint256) {
-        uint256 _accumulator = 0;
-        for (uint256 i = 0; i < _prices.length; i++) {
-            _accumulator += _prices[i];
+    // Returns true if the address specified is one of the permitted oracles involved in this PriceFeed
+    function validOracle(address _oracle) private view returns (bool) {
+        for (uint256 i = 0; i < oracles.length; i++) {
+            if (oracles[i] == _oracle) {
+                return true;
+            }
         }
-        return _accumulator / _prices.length;
+        return false;
     }
 }
