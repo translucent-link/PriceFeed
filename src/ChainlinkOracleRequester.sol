@@ -22,6 +22,11 @@ contract ChainlinkOracleRequester is ChainlinkClient, OracleRequesterInterface {
         override
         returns (bytes32 requestId)
     {
+        require(
+            msg.sender == address(priceReceiver),
+            "Only price receiver can make requests"
+        );
+
         Chainlink.Request memory req = buildChainlinkRequest(
             stringToBytes32(_node.jobId),
             address(this),
