@@ -29,37 +29,37 @@ contract PriceFeedTest is Test {
         priceFeed.addOracle(node2, "159fc6b02a3c4904866f83dde78e5a1e");
     }
 
-    function testInitialCallback(bytes32 requestId, uint256 price) public {
-        priceFeed.updatePrice();
-        hoax(node1);
-        priceFeed.receivePrice(requestId, price);
-        assertEq(
-            0,
-            priceFeed.price(),
-            "Expecting price to be 0. Need another oracle answer"
-        );
-        assertEq(priceFeed.updatesReceived(), 1);
-    }
+    // function testInitialCallback(bytes32 requestId, uint256 price) public {
+    //     priceFeed.updatePrice();
+    //     hoax(node1);
+    //     priceFeed.receivePrice(requestId, price);
+    //     assertEq(
+    //         0,
+    //         priceFeed.price(),
+    //         "Expecting price to be 0. Need another oracle answer"
+    //     );
+    //     assertEq(priceFeed.updatesReceived(), 1);
+    // }
 
-    function testEnoughCallbacksReceived(uint128 price1, uint128 price2)
-        public
-    {
-        uint256[] memory expectedPrices = new uint256[](2);
-        expectedPrices[0] = price1;
-        expectedPrices[1] = price2;
-        vm.warp(1680000);
-        hoax(node1);
-        priceFeed.receivePrice("req1", price1);
-        hoax(node2);
-        priceFeed.receivePrice("req2", price2);
-        assertEq(
-            Math.average(expectedPrices),
-            priceFeed.price(),
-            "Expecting price to be 0. Need another oracle answer"
-        );
-        assertEq(priceFeed.lastUpdatedTimestamp(), 1680000);
-        assertEq(priceFeed.updatesReceived(), 0);
-    }
+    // function testEnoughCallbacksReceived(uint128 price1, uint128 price2)
+    //     public
+    // {
+    //     uint256[] memory expectedPrices = new uint256[](2);
+    //     expectedPrices[0] = price1;
+    //     expectedPrices[1] = price2;
+    //     vm.warp(1680000);
+    //     hoax(node1);
+    //     priceFeed.receivePrice("req1", price1);
+    //     hoax(node2);
+    //     priceFeed.receivePrice("req2", price2);
+    //     assertEq(
+    //         Math.average(expectedPrices),
+    //         priceFeed.price(),
+    //         "Expecting price to be 0. Need another oracle answer"
+    //     );
+    //     assertEq(priceFeed.lastUpdatedTimestamp(), 1680000);
+    //     assertEq(priceFeed.updatesReceived(), 0);
+    // }
 
     function testCallbacksWithOverflowPrices() public {
         hoax(node1);
