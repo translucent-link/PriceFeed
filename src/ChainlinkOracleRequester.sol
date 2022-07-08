@@ -8,7 +8,6 @@ import "./PriceReceiverInterface.sol";
 
 contract ChainlinkOracleRequester is ChainlinkClient, OracleRequesterInterface {
     PriceReceiverInterface public priceReceiver;
-    uint256 public price;
 
     constructor(
         PriceReceiverInterface _priceReceiver,
