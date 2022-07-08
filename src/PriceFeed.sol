@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.7;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./Node.sol";
@@ -64,7 +64,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
     }
 
     // Returns the number of oracles registered with this PriceFeed contract.
-    function noOracles() public view returns (uint256) {
+    function noOracles() external view returns (uint256) {
         return oracles.length;
     }
 
@@ -147,13 +147,13 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         for (uint256 i = 0; i < oracles.length; i++) {
             address oracle = oracles[i];
             Node memory node = nodes[oracle];
-            oracleRequester.makeRequestToNode(node, payment);
             emit PriceRequested(oracle, node.jobId);
+            oracleRequester.makeRequestToNode(node, payment);
         }
     }
 
     // Records a price update from an oracle. If all oracles have reported, the price is calculated and the PriceUpdated event is emitted.
-    function receivePrice(bytes32, uint256 _newPrice) external {
+    function receivePrice(bytes32, uint256 _newPrice) external override {
         require(msg.sender == address(oracleRequester), "Not a valid sender");
         prices.push(_newPrice);
         updatesReceived++;
