@@ -7,10 +7,14 @@ import "./OracleRequesterInterface.sol";
 import "./PriceReceiverInterface.sol";
 
 contract ChainlinkOracleRequester is ChainlinkClient, OracleRequesterInterface {
-    address public priceReceiverAddress;
+    PriceReceiverInterface public priceReceiver;
+    uint256 public price;
 
-    constructor(address _priceReceiverAddress, address _linkTokenAddress) {
-        priceReceiverAddress = _priceReceiverAddress;
+    constructor(
+        PriceReceiverInterface _priceReceiver,
+        address _linkTokenAddress
+    ) {
+        priceReceiver = _priceReceiver;
         setChainlinkToken(_linkTokenAddress);
     }
 
@@ -47,9 +51,6 @@ contract ChainlinkOracleRequester is ChainlinkClient, OracleRequesterInterface {
         external
         recordChainlinkFulfillment(_requestId)
     {
-        PriceReceiverInterface priceReceiver = PriceReceiverInterface(
-            priceReceiverAddress
-        );
         priceReceiver.receivePrice(_requestId, _newPrice);
     }
 }

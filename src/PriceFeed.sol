@@ -25,7 +25,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
     uint256 public payment;
 
     // contains the Chainlink client for request & callback
-    OracleRequesterInterface oracleRequester;
+    OracleRequesterInterface public oracleRequester;
 
     // list of prices received from oracles - so far
     uint256[] public prices;
@@ -43,7 +43,11 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
     event PriceRequested(address indexed oracle, string indexed jobId);
 
     // Emitted when all oracles have reported in and the price is updated
-    event PriceUpdated(uint256 indexed price, uint256 timestamp);
+    event PriceUpdated(
+        address indexed updatedBy,
+        uint256 indexed price,
+        uint256 timestamp
+    );
 
     // Creates a new PriceFeed contract with specified minimum and maximum number of oracles as well as LINK payment details.
     constructor(
@@ -55,10 +59,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
         minimumOracles = _minimumOracles;
         maximumOracles = _maximumOracles;
         payment = _payment;
-        oracleRequester = new ChainlinkOracleRequester(
-            address(this),
-            _linkTokenAddress
-        );
+        oracleRequester = new ChainlinkOracleRequester(this, _linkTokenAddress);
         updatesReceived = 0;
     }
 
@@ -153,7 +154,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
 
     // Records a price update from an oracle. If all oracles have reported, the price is calculated and the PriceUpdated event is emitted.
     function receivePrice(bytes32, uint256 _newPrice) external {
-        require(indexOfOracle(msg.sender) != -1, "Not a valid sender");
+        require(msg.sender == address(oracleRequester), "Not a valid sender");
         prices.push(_newPrice);
         updatesReceived++;
         if (updatesReceived == oracles.length) {
@@ -161,7 +162,7 @@ contract PriceFeed is Ownable, PriceReceiverInterface {
             lastUpdatedTimestamp = block.timestamp;
             delete prices;
             updatesReceived = 0;
-            emit PriceUpdated(price, lastUpdatedTimestamp);
+            emit PriceUpdated(msg.sender, price, lastUpdatedTimestamp);
         }
     }
 }
